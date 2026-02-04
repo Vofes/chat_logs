@@ -5,7 +5,7 @@ on:
 
 # SET YOUR FILENAME HERE (Only change this one spot!)
 env:
-  TARGET_FILENAME: "my_chat_logs" 
+  TARGET_FILENAME: "shitposts03Feb2025.csv" 
 
 jobs:
   export_and_upload:
