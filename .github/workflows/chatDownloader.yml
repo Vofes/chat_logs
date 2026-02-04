@@ -50,7 +50,7 @@ jobs:
               #
               #
               #
-              final.to_csv('test.csv', index=False, header=False)
+              final.to_csv('general_3Feb2025.csv', index=False, header=False)
           except Exception as e:
               print(f'Error: {e}')
               exit(1)
@@ -61,9 +61,9 @@ jobs:
           # EDIT PATH BELOW (Change your_filename_here.csv to match the name used in the Python step)
           curl -X POST https://content.dropboxapi.com/2/files/upload \
             --header "Authorization: Bearer ${{ steps.dropbox_auth.outputs.atoken }}" \
-            --header "Dropbox-API-Arg: {\"path\": \"/bruh/OTHER_CHATS/test.csv\",\"mode\": \"overwrite\"}" \
+            --header "Dropbox-API-Arg: {\"path\": \"/bruh/OTHER_CHATS/general/general_3Feb2025.csv\",\"mode\": \"overwrite\"}" \
             --header "Content-Type: application/octet-stream" \
-            --data-binary @test.csv
+            --data-binary @general_3Feb2025.csv
 # 
 # FILE NAME ABOVE
 #
