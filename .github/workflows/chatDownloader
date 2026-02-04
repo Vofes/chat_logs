@@ -1,0 +1,62 @@
+name: One-Time Discord Export
+
+on:
+  workflow_dispatch: # Manual trigger for one-time use
+
+jobs:
+  export_and_upload:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup Tools
+        run: |
+          curl -L https://github.com/Tyrrrz/DiscordChatExporter/releases/latest/download/DiscordChatExporter.Cli.linux-x64.zip -o dce.zip
+          unzip dce.zip -d dce && chmod +x dce/DiscordChatExporter.Cli
+
+      - name: Install Pandas
+        run: pip install pandas
+
+      - name: Get Dropbox Token
+        id: dropbox_auth
+        run: |
+          TOKEN=$(curl -s -X POST https://api.dropbox.com/oauth2/token \
+            -u "${{ secrets.DROPBOX_APPKEY }}:${{ secrets.DROPBOX_SECRET }}" \
+            -d grant_type=refresh_token \
+            -d refresh_token="${{ secrets.DROPBOX_REFRESH_TOKEN }}" | jq -r '.access_token')
+          echo "atoken=$TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Export and Format
+        run: |
+          # 1. Export since Jan 1st, 2020
+          ./dce/DiscordChatExporter.Cli export \
+            -t "${{ secrets.DISCORD_USERTOKEN }}" \
+            -c ${{ secrets.DISCORD_CHANNEL }} \
+            -f Csv -o raw_export.csv \
+            --after 2020-01-01
+
+          # 2. Format to 5-column structure
+          python3 -c "
+          import pandas as pd
+          try:
+              df = pd.read_csv('raw_export.csv')
+              final = pd.DataFrame()
+              final[0] = df.iloc[:, 0]
+              final[1] = df.iloc[:, 1]
+              final[2] = df.iloc[:, 2]
+              final[3] = df.iloc[:, 3]
+              final[4] = '' 
+              # EDIT FILENAME BELOW (the name of the local file before upload)
+              final.to_csv('test.csv', index=False, header=False)
+          except Exception as e:
+              print(f'Error: {e}')
+              exit(1)
+          "
+
+      - name: Upload to Dropbox
+        run: |
+          # EDIT PATH BELOW (Change your_filename_here.csv to match the name used in the Python step)
+          curl -X POST https://content.dropboxapi.com/2/files/upload \
+            --header "Authorization: Bearer ${{ steps.dropbox_auth.outputs.atoken }}" \
+            --header "Dropbox-API-Arg: {\"path\": \"/bruh/OTHER_CHATS/test.csv\",\"mode\": \"overwrite\"}" \
+            --header "Content-Type: application/octet-stream" \
+            --data-binary @your_filename_here.csv
