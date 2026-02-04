@@ -1,7 +1,11 @@
 name: One-Time Discord Export
 
 on:
-  workflow_dispatch: # Manual trigger for one-time use
+  workflow_dispatch:
+
+# SET YOUR FILENAME HERE (Only change this one spot!)
+env:
+  TARGET_FILENAME: "my_chat_logs" 
 
 jobs:
   export_and_upload:
@@ -27,17 +31,18 @@ jobs:
 
       - name: Export and Format
         run: |
-          # 1. Export since Jan 1st, 2020
           ./dce/DiscordChatExporter.Cli export \
             -t "${{ secrets.DISCORD_USERTOKEN }}" \
             -c ${{ secrets.DISCORD_CHANNEL }} \
             -f Csv -o raw_export.csv \
             --after 2020-01-01
 
-          # 2. Format to 5-column structure
           python3 -c "
           import pandas as pd
+          import os
           try:
+              # Pulls the filename from the env section at the top
+              fname = os.getenv('TARGET_FILENAME') + '.csv'
               df = pd.read_csv('raw_export.csv')
               final = pd.DataFrame()
               final[0] = df.iloc[:, 0]
@@ -45,12 +50,7 @@ jobs:
               final[2] = df.iloc[:, 2]
               final[3] = df.iloc[:, 3]
               final[4] = '' 
-              # EDIT FILENAME BELOW (the name of the local file before upload)
-              # 
-              #
-              #
-              #
-              final.to_csv('general_3Feb2025.csv', index=False, header=False)
+              final.to_csv(fname, index=False, header=False)
           except Exception as e:
               print(f'Error: {e}')
               exit(1)
@@ -58,13 +58,9 @@ jobs:
 
       - name: Upload to Dropbox
         run: |
-          # EDIT PATH BELOW (Change your_filename_here.csv to match the name used in the Python step)
+          # Uses the variable for both the local file path and the Dropbox path
           curl -X POST https://content.dropboxapi.com/2/files/upload \
             --header "Authorization: Bearer ${{ steps.dropbox_auth.outputs.atoken }}" \
-            --header "Dropbox-API-Arg: {\"path\": \"/bruh/OTHER_CHATS/general/general_3Feb2025.csv\",\"mode\": \"overwrite\"}" \
+            --header "Dropbox-API-Arg: {\"path\": \"/BRUH/OTHER_CHATS/${{ env.TARGET_FILENAME }}.csv\",\"mode\": \"overwrite\"}" \
             --header "Content-Type: application/octet-stream" \
-            --data-binary @general_3Feb2025.csv
-# 
-# FILE NAME ABOVE
-#
-#
+            --data-binary "@${{ env.TARGET_FILENAME }}.csv"
