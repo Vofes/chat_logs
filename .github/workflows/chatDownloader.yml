@@ -46,6 +46,10 @@ jobs:
               final[3] = df.iloc[:, 3]
               final[4] = '' 
               # EDIT FILENAME BELOW (the name of the local file before upload)
+              # 
+              #
+              #
+              #
               final.to_csv('test.csv', index=False, header=False)
           except Exception as e:
               print(f'Error: {e}')
@@ -59,4 +63,8 @@ jobs:
             --header "Authorization: Bearer ${{ steps.dropbox_auth.outputs.atoken }}" \
             --header "Dropbox-API-Arg: {\"path\": \"/bruh/OTHER_CHATS/test.csv\",\"mode\": \"overwrite\"}" \
             --header "Content-Type: application/octet-stream" \
-            --data-binary @your_filename_here.csv
+            --data-binary @test.csv
+# 
+# FILE NAME ABOVE
+#
+#
