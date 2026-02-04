@@ -61,6 +61,6 @@ jobs:
           # Uses the variable for both the local file path and the Dropbox path
           curl -X POST https://content.dropboxapi.com/2/files/upload \
             --header "Authorization: Bearer ${{ steps.dropbox_auth.outputs.atoken }}" \
-            --header "Dropbox-API-Arg: {\"path\": \"/BRUH/OTHER_CHATS/${{ env.TARGET_FILENAME }}.csv\",\"mode\": \"overwrite\"}" \
+            --header "Dropbox-API-Arg: {\"path\": \"/bruh/OTHER_CHATS/${{ env.TARGET_FILENAME }}.csv\",\"mode\": \"overwrite\"}" \
             --header "Content-Type: application/octet-stream" \
             --data-binary "@${{ env.TARGET_FILENAME }}.csv"
