@@ -1,0 +1,102 @@
+name: Discord Log Auto-Updater
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'  # Runs every 12 hours automatically
+  workflow_dispatch:
+    inputs:
+      lookback_days:
+        description: 'Number of days to go back (Manual only)'
+        required: true
+        default: '2'
+
+jobs:
+  update_logs:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Setup Tools
+        run: |
+          curl -L https://github.com/Tyrrrz/DiscordChatExporter/releases/latest/download/DiscordChatExporter.Cli.linux-x64.zip -o dce.zip
+          unzip dce.zip -d dce && chmod +x dce/DiscordChatExporter.Cli
+
+      - name: Install Pandas
+        run: pip install pandas
+
+      - name: Get Dropbox Token
+        id: dropbox_auth
+        run: |
+          TOKEN=$(curl -s -X POST https://api.dropbox.com/oauth2/token \
+            -u "${{ secrets.DROPBOX_APP_KEY }}:${{ secrets.DROPBOX_APP_SECRET }}" \
+            -d grant_type=refresh_token \
+            -d refresh_token="${{ secrets.DROPBOX_REFRESH_TOKEN }}" | jq -r '.access_token')
+          echo "atoken=$TOKEN" >> $GITHUB_OUTPUT
+
+      - name: Download, Merge & Priority Sort
+        run: |
+          # 1. Download current master
+          curl -L "${{ secrets.DROPBOXLINK }}" -o master_history.csv
+
+          # 2. Determine Lookback Days
+          # If triggered by schedule, use 2 days. If manual, use the input.
+          if [ "${{ github.event_name }}" == "schedule" ]; then
+            DAYS="2"
+          else
+            DAYS="${{ github.event.inputs.lookback_days }}"
+          fi
+          
+          LOOKBACK_DATE=$(date -d "$DAYS days ago" +%Y-%m-%d)
+          echo "Syncing data since $LOOKBACK_DATE ($DAYS days)"
+          
+          ./dce/DiscordChatExporter.Cli export \
+            -t "${{ secrets.DISCORD_TOKEN }}" \
+            -c ${{ secrets.CHANNEL_ID }} \
+            -f Csv -o recent_slice.csv \
+            --after "$LOOKBACK_DATE"
+
+          # 3. Python Priority Merger (4-column standard)
+          python3 -c "
+          import pandas as pd
+          try:
+              # Force string types to prevent merge errors
+              master = pd.read_csv('master_history.csv', header=None, dtype=str, low_memory=False)
+              recent = pd.read_csv('recent_slice.csv', header=0, dtype=str, low_memory=False)
+              
+              # Take only first 4 columns
+              master = master.iloc[:, :4]
+              recent = recent.iloc[:, :4]
+              
+              cols = ['userID', 'userName', 'timestamp', 'message']
+              master.columns = cols
+              recent.columns = cols
+
+              # Key for identifying same message
+              key = ['userID', 'timestamp']
+              
+              # Priority Merge: Remove old versions of new messages
+              master_clean = master.merge(recent[key], on=key, how='left', indicator=True)
+              master_clean = master_clean[master_clean['_merge'] == 'left_only'].drop(columns=['_merge'])
+              
+              # Combine
+              final = pd.concat([master_clean, recent], ignore_index=True)
+              
+              # Sort by ISO8601
+              final['dt'] = pd.to_datetime(final['timestamp'], errors='coerce', utc=True)
+              final = final.dropna(subset=['dt']).sort_values('dt').drop(columns=['dt'])
+
+              # Save as final version
+              final.to_csv('final_master.csv', index=False, header=False)
+              print('Merge complete.')
+          except Exception as e:
+              print(f'Error: {e}')
+              exit(1)
+          "
+
+      - name: Upload to Dropbox (LIVE)
+        run: |
+          # UPDATED PATH: Overwriting your main bruh_log.csv
+          curl -X POST https://content.dropboxapi.com/2/files/upload \
+            --header "Authorization: Bearer ${{ steps.dropbox_auth.outputs.atoken }}" \
+            --header "Dropbox-API-Arg: {\"path\": \"/bruh/bruh_log/bruh_log.csv\",\"mode\": \"overwrite\"}" \
+            --header "Content-Type: application/octet-stream" \
+            --data-binary @final_master.csv
