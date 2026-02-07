@@ -1,0 +1,11 @@
+# Bruh auto logger
+
+DISCORD_TOKEN
+DROPBOX_REFRESH_TOKEN
+DROPBOX_APP_KEY
+DROPBOX_APP_SECRET
+DROPBOXLINK
+CHANNEL_ID
+
+# Channel exported
+all the rest
