@@ -1,3 +1,5 @@
+# for bruh_log
+
 name: Discord Log Auto-Updater
 
 on:
@@ -40,7 +42,7 @@ jobs:
           # 2. Determine Lookback Days
           # If triggered by schedule, use 2 days. If manual, use the input.
           if [ "${{ github.event_name }}" == "schedule" ]; then
-            DAYS="2"
+            DAYS="5"
           else
             DAYS="${{ github.event.inputs.lookback_days }}"
           fi
