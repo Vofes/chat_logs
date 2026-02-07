@@ -4,7 +4,7 @@ name: Discord Log Auto-Updater
 
 on:
   schedule:
-    - cron: '0 */12 * * *'  # Runs every 12 hours automatically
+    - cron: '30 2 * * *'  # Runs every 24 hours automatically
   workflow_dispatch:
     inputs:
       lookback_days:
@@ -42,7 +42,7 @@ jobs:
           # 2. Determine Lookback Days
           # If triggered by schedule, use 2 days. If manual, use the input.
           if [ "${{ github.event_name }}" == "schedule" ]; then
-            DAYS="5"
+            DAYS="7"
           else
             DAYS="${{ github.event.inputs.lookback_days }}"
           fi
