@@ -4,7 +4,7 @@ name: Discord Log Auto-Updater
 
 on:
   schedule:
-    - cron: '0 6,18 * * *'  # Runs every 24 hours automatically
+    - cron: '0 1,13 * * *'  # Runs every 24 hours automatically
   workflow_dispatch:
     inputs:
       lookback_days:
